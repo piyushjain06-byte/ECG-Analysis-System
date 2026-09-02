@@ -1,0 +1,12 @@
+numpy~=2.4
+pandas~=3.0
+scipy~=1.17
+scikit-learn~=1.8
+xgboost~=3.4
+wfdb~=4.3
+streamlit~=1.62
+reportlab~=4.4
+matplotlib~=3.10
+plotly~=7.0
+pywavelets~=1.9
+pytest~=9.1

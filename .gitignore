@@ -1,0 +1,27 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Logs
+*.log
+
+# Local uploads / DB (keep sample/)
+data/raw/
+data/history.db
+data/*.db
+
+# Generated PDFs
+reports/*.pdf
+reports/figures/
+
+# Editors
+.idea/
+.vscode/
+*.swp

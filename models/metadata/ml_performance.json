@@ -1,0 +1,350 @@
+{
+    "class_mapping": {
+        "0": "F",
+        "1": "N",
+        "2": "S",
+        "3": "V"
+    },
+    "feature_cols": [
+        "pre_rr",
+        "post_rr",
+        "rr_ratio",
+        "local_rr_mean",
+        "mean",
+        "variance",
+        "std",
+        "skewness",
+        "kurtosis",
+        "energy",
+        "r_height",
+        "q_depth",
+        "s_depth",
+        "qrs_amplitude",
+        "qrs_duration_est",
+        "dominant_frequency",
+        "spectral_entropy"
+    ],
+    "performance": {
+        "Logistic Regression": {
+            "accuracy": 0.6652594307503745,
+            "precision": 0.9426533599755211,
+            "recall": 0.6652594307503745,
+            "f1_score": 0.7667997410712121,
+            "confusion_matrix": [
+                [
+                    0,
+                    0,
+                    0,
+                    3
+                ],
+                [
+                    1412,
+                    4066,
+                    357,
+                    494
+                ],
+                [
+                    0,
+                    2,
+                    36,
+                    2
+                ],
+                [
+                    95,
+                    0,
+                    93,
+                    783
+                ]
+            ],
+            "report": {
+                "F": {
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "f1-score": 0.0,
+                    "support": 3.0
+                },
+                "N": {
+                    "precision": 0.9995083579154376,
+                    "recall": 0.6424395639121504,
+                    "f1-score": 0.7821486967394441,
+                    "support": 6329.0
+                },
+                "S": {
+                    "precision": 0.07407407407407407,
+                    "recall": 0.9,
+                    "f1-score": 0.13688212927756654,
+                    "support": 40.0
+                },
+                "V": {
+                    "precision": 0.6107644305772231,
+                    "recall": 0.8063851699279093,
+                    "f1-score": 0.6950732356857523,
+                    "support": 971.0
+                },
+                "accuracy": 0.6652594307503745,
+                "macro avg": {
+                    "precision": 0.4210867156416837,
+                    "recall": 0.587206183460015,
+                    "f1-score": 0.4035260154256907,
+                    "support": 7343.0
+                },
+                "weighted avg": {
+                    "precision": 0.9426533599755211,
+                    "recall": 0.6652594307503745,
+                    "f1-score": 0.7667997410712121,
+                    "support": 7343.0
+                }
+            }
+        },
+        "Support Vector Machine": {
+            "accuracy": 0.7062508511507558,
+            "precision": 0.9337447065539877,
+            "recall": 0.7062508511507558,
+            "f1_score": 0.7869655022640076,
+            "confusion_matrix": [
+                [
+                    1,
+                    0,
+                    0,
+                    2
+                ],
+                [
+                    1197,
+                    4265,
+                    203,
+                    664
+                ],
+                [
+                    0,
+                    17,
+                    20,
+                    3
+                ],
+                [
+                    21,
+                    5,
+                    45,
+                    900
+                ]
+            ],
+            "report": {
+                "F": {
+                    "precision": 0.0008203445447087777,
+                    "recall": 0.3333333333333333,
+                    "f1-score": 0.0016366612111292963,
+                    "support": 3.0
+                },
+                "N": {
+                    "precision": 0.9948682062048052,
+                    "recall": 0.6738821298783378,
+                    "f1-score": 0.8035041446872645,
+                    "support": 6329.0
+                },
+                "S": {
+                    "precision": 0.07462686567164178,
+                    "recall": 0.5,
+                    "f1-score": 0.12987012987012986,
+                    "support": 40.0
+                },
+                "V": {
+                    "precision": 0.5736137667304015,
+                    "recall": 0.9268795056642637,
+                    "f1-score": 0.7086614173228346,
+                    "support": 971.0
+                },
+                "accuracy": 0.7062508511507558,
+                "macro avg": {
+                    "precision": 0.4109822957878893,
+                    "recall": 0.6085237422189838,
+                    "f1-score": 0.4109180882728396,
+                    "support": 7343.0
+                },
+                "weighted avg": {
+                    "precision": 0.9337447065539877,
+                    "recall": 0.7062508511507558,
+                    "f1-score": 0.7869655022640076,
+                    "support": 7343.0
+                }
+            }
+        },
+        "Random Forest": {
+            "accuracy": 0.777202778156067,
+            "precision": 0.9128585058475349,
+            "recall": 0.777202778156067,
+            "f1_score": 0.8164453565534587,
+            "confusion_matrix": [
+                [
+                    0,
+                    0,
+                    0,
+                    3
+                ],
+                [
+                    240,
+                    4744,
+                    122,
+                    1223
+                ],
+                [
+                    0,
+                    33,
+                    5,
+                    2
+                ],
+                [
+                    0,
+                    7,
+                    6,
+                    958
+                ]
+            ],
+            "report": {
+                "F": {
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "f1-score": 0.0,
+                    "support": 3.0
+                },
+                "N": {
+                    "precision": 0.9916387959866221,
+                    "recall": 0.7495654921788593,
+                    "f1-score": 0.8537748582740934,
+                    "support": 6329.0
+                },
+                "S": {
+                    "precision": 0.03759398496240601,
+                    "recall": 0.125,
+                    "f1-score": 0.057803468208092484,
+                    "support": 40.0
+                },
+                "V": {
+                    "precision": 0.43824336688014637,
+                    "recall": 0.9866117404737385,
+                    "f1-score": 0.6069052898321191,
+                    "support": 971.0
+                },
+                "accuracy": 0.777202778156067,
+                "macro avg": {
+                    "precision": 0.3668690369572936,
+                    "recall": 0.46529430816314943,
+                    "f1-score": 0.37962090407857624,
+                    "support": 7343.0
+                },
+                "weighted avg": {
+                    "precision": 0.9128585058475349,
+                    "recall": 0.777202778156067,
+                    "f1-score": 0.8164453565534587,
+                    "support": 7343.0
+                }
+            }
+        },
+        "XGBoost": {
+            "accuracy": 0.7347133324254392,
+            "precision": 0.9326785374611662,
+            "recall": 0.7347133324254392,
+            "f1_score": 0.8021181691477556,
+            "confusion_matrix": [
+                [
+                    1,
+                    0,
+                    0,
+                    2
+                ],
+                [
+                    960,
+                    4421,
+                    174,
+                    774
+                ],
+                [
+                    0,
+                    13,
+                    26,
+                    1
+                ],
+                [
+                    9,
+                    0,
+                    15,
+                    947
+                ]
+            ],
+            "report": {
+                "F": {
+                    "precision": 0.0010309278350515464,
+                    "recall": 0.3333333333333333,
+                    "f1-score": 0.0020554984583761563,
+                    "support": 3.0
+                },
+                "N": {
+                    "precision": 0.9970681100586378,
+                    "recall": 0.6985305735503239,
+                    "f1-score": 0.8215181640806467,
+                    "support": 6329.0
+                },
+                "S": {
+                    "precision": 0.12093023255813953,
+                    "recall": 0.65,
+                    "f1-score": 0.20392156862745098,
+                    "support": 40.0
+                },
+                "V": {
+                    "precision": 0.5493039443155452,
+                    "recall": 0.9752832131822863,
+                    "f1-score": 0.7027829313543599,
+                    "support": 971.0
+                },
+                "accuracy": 0.7347133324254392,
+                "macro avg": {
+                    "precision": 0.41708330369184354,
+                    "recall": 0.6642867800164859,
+                    "f1-score": 0.4325695406302084,
+                    "support": 7343.0
+                },
+                "weighted avg": {
+                    "precision": 0.9326785374611662,
+                    "recall": 0.7347133324254392,
+                    "f1-score": 0.8021181691477556,
+                    "support": 7343.0
+                }
+            }
+        }
+    },
+    "class_distribution": {
+        "N": 15255,
+        "V": 3972,
+        "F": 418,
+        "S": 313
+    },
+    "train_records": [
+        "mitbih_119",
+        "mitbih_200",
+        "mitbih_201",
+        "mitbih_208",
+        "mitbih_223",
+        "sim_100",
+        "sim_101",
+        "sim_102",
+        "sim_103",
+        "sim_104",
+        "sim_105",
+        "sim_107"
+    ],
+    "test_records": [
+        "mitbih_100",
+        "mitbih_106",
+        "mitbih_203",
+        "sim_106"
+    ],
+    "n_train": 12615,
+    "n_test": 7343,
+    "split_note": "Record-level split: all beats from one record/patient stay in train or test only.",
+    "data_sources": {
+        "synthetic_records": 8,
+        "synthetic_beats": 573,
+        "mitbih_records": 8,
+        "mitbih_beats": 19385
+    },
+    "trained_on": "both",
+    "missing_classes_in_test": []
+}

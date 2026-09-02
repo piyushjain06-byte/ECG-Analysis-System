@@ -1,0 +1,87 @@
+
+███████╗ ██████╗ ██████╗     ███████╗██╗  ██╗
+██╔════╝██╔════╝██╔════╝     ██╔════╝╚██╗██╔╝
+█████╗  ██║     ██║  ███╗    █████╗   ╚███╔╝ 
+██╔══╝  ██║     ██║   ██║    ██╔══╝   ██╔██╗ 
+███████╗╚██████╗╚██████╔╝    ██║     ██╔╝ ██╗
+╚══════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝  ╚═╝
+                                              
+    INTELLIGENT ECG SIGNAL ANALYSIS PLATFORM
+    ═══════════════════════════════════════
+
+
+┌────────────────────────────────────────────┐
+│  🚀 QUICK START (Pick One Method)         │
+└────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════╗
+║  ⭐ OPTION 1: ULTIMATE FIX (RECOMMENDED)    ║
+╚══════════════════════════════════════════════╝
+
+   1. Double-click: ULTIMATE_FIX.bat
+   2. Wait 3-5 minutes
+   3. Browser opens automatically
+   4. You're done! 🎉
+
+
+╔══════════════════════════════════════════════╗
+║  ⚡ OPTION 2: ONE-LINE COMMAND (FASTEST)    ║
+╚══════════════════════════════════════════════╝
+
+   Open PowerShell → Copy & Paste:
+
+   cd "c:\Users\pankaj jain\OneDrive\ドキュメント\Pictures\Desktop\ecg" ; python -m pip install plotly streamlit ; python -m streamlit run app.py
+
+
+╔══════════════════════════════════════════════╗
+║  💻 OPTION 3: SIMPLE SCRIPT                 ║
+╚══════════════════════════════════════════════╝
+
+   Right-click: SIMPLE_RUN.ps1
+   → "Run with PowerShell"
+
+
+┌────────────────────────────────────────────┐
+│  📸 SCREENSHOTS                            │
+└────────────────────────────────────────────┘
+
+   Win + Shift + S → Drag → Auto-copies!
+
+
+┌────────────────────────────────────────────┐
+│  🎯 USING THE APP                          │
+└────────────────────────────────────────────┘
+
+   1️⃣  Click "Analyze demo ECG"
+   2️⃣  Wait 5-10 seconds
+   3️⃣  Navigate pages (left sidebar):
+       • DSP Analysis
+       • ECG Features  
+       • ML Prediction
+       • Model Performance
+   4️⃣  Take screenshots!
+
+
+┌────────────────────────────────────────────┐
+│  🛑 STOP SERVER                            │
+└────────────────────────────────────────────┘
+
+   Ctrl + C → Y → Enter
+
+
+┌────────────────────────────────────────────┐
+│  📁 FILES TO USE                           │
+└────────────────────────────────────────────┘
+
+   ⭐ ULTIMATE_FIX.bat ........... Best option
+   ⚡ SIMPLE_RUN.ps1 ............. PowerShell
+   📖 README_SIMPLE.txt .......... Instructions
+   🔧 fix_venv.bat ............... Fix venv
+   🚀 run.bat .................... Quick launch
+
+
+════════════════════════════════════════════════
+
+   ALL PROBLEMS FIXED! JUST RUN ULTIMATE_FIX.bat
+
+════════════════════════════════════════════════

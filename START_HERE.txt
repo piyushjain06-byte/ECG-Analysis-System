@@ -1,0 +1,113 @@
+╔════════════════════════════════════════════════════════════╗
+║                                                            ║
+║        ECG ANALYSIS PLATFORM - QUICK START GUIDE          ║
+║                                                            ║
+╚════════════════════════════════════════════════════════════╝
+
+
+🚀 SUPER EASY METHOD (RECOMMENDED)
+═══════════════════════════════════════════════════════════
+
+1. Double-click this file in File Explorer:
+   
+   📄 setup_and_run.bat
+
+2. Wait 3-5 minutes (installs everything automatically)
+
+3. Browser opens automatically → You're done! 🎉
+
+
+───────────────────────────────────────────────────────────
+
+
+🔄 NEXT TIME (After First Setup)
+═══════════════════════════════════════════════════════════
+
+Just double-click:
+
+   📄 run.bat
+
+Takes 10 seconds to start!
+
+
+───────────────────────────────────────────────────────────
+
+
+💻 ALTERNATIVE: Manual Commands (PowerShell)
+═══════════════════════════════════════════════════════════
+
+Open PowerShell and run these commands:
+
+cd "c:\Users\pankaj jain\OneDrive\ドキュメント\Pictures\Desktop\ecg"
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install streamlit
+streamlit run app.py
+
+
+───────────────────────────────────────────────────────────
+
+
+📸 TAKING SCREENSHOTS
+═══════════════════════════════════════════════════════════
+
+1. After app opens in browser
+2. Click "Analyze demo ECG" button
+3. Navigate through pages in left sidebar
+4. Press Win + Shift + S to screenshot
+5. Select area and it copies to clipboard
+
+
+───────────────────────────────────────────────────────────
+
+
+🛑 STOPPING THE SERVER
+═══════════════════════════════════════════════════════════
+
+In the command window:
+- Press Ctrl + C
+- Type Y and press Enter
+
+
+───────────────────────────────────────────────────────────
+
+
+✅ WHAT TO EXPECT
+═══════════════════════════════════════════════════════════
+
+When successful, you'll see:
+
+  "You can now view your Streamlit app in your browser.
+   Local URL: http://localhost:8501"
+
+Then browser opens automatically to the app!
+
+
+───────────────────────────────────────────────────────────
+
+
+🆘 NEED HELP?
+═══════════════════════════════════════════════════════════
+
+Read these files:
+- SIMPLE_SETUP.md (detailed guide)
+- RUN_COMMANDS.md (troubleshooting)
+- FIX_AND_RUN.md (fixes)
+
+
+───────────────────────────────────────────────────────────
+
+
+🎓 FOR PRESENTATION
+═══════════════════════════════════════════════════════════
+
+Best pages to screenshot:
+✓ DSP Analysis (filtering stages)
+✓ ECG Features (R-peaks detection)
+✓ ML Prediction (classification)
+✓ Model Performance (comparison)
+
+
+───────────────────────────────────────────────────────────
+
+Good luck! 🚀
