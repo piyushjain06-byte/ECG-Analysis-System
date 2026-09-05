@@ -8,36 +8,39 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
     3. Extreme amplitude violations (out of standard physical range of -5 mV to +5 mV).
     4. High-frequency noise level.
     5. Baseline Wander severity.
-    
+
     Returns a dictionary of metrics and a final quality string: 'GOOD', 'ACCEPTABLE', or 'POOR'.
+    Also returns a numeric 'sqi_score' (0-100) summarizing the same signals as a single number.
     """
     metrics = {}
-    
+
     # Handle empty or invalid shape
     if signal is None or len(signal) == 0:
         return {
             'status': 'POOR',
+            'sqi_score': 0,
             'missing_ratio': 1.0,
             'flatline_ratio': 1.0,
             'extreme_ratio': 0.0,
             'hf_noise_ratio': 1.0,
             'details': "Empty signal received."
         }
-        
+
     signal = np.asarray(signal)
     total_len = len(signal)
-    
+
     # 1. Missing Data
     nan_count = np.sum(np.isnan(signal)) + np.sum(np.isinf(signal))
     missing_ratio = float(nan_count / total_len)
     metrics['missing_ratio'] = missing_ratio
-    
+
     # Clean up NaNs internally for subsequent computations
     clean_sig = np.copy(signal)
     if nan_count > 0:
         if nan_count == total_len:
             return {
                 'status': 'POOR',
+                'sqi_score': 0,
                 'missing_ratio': 1.0,
                 'flatline_ratio': 0.0,
                 'extreme_ratio': 0.0,
@@ -54,15 +57,15 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
     # Count how many samples are in flat segments
     flatline_ratio = float(np.sum(flat_diff) / total_len)
     metrics['flatline_ratio'] = flatline_ratio
-    
+
     # 3. Extreme Amplitudes (physiologically, ECGs rarely exceed 4.0 mV or are less than -4.0 mV)
     # Standard MIT-BIH recordings are calibrated, usually within -3 to 3 mV.
     extreme_count = np.sum((clean_sig > 4.5) | (clean_sig < -4.5))
     extreme_ratio = float(extreme_count / total_len)
     metrics['extreme_ratio'] = extreme_ratio
-    
+
     # 4. High-Frequency Noise (muscle artifact estimation)
-    # We can estimate this by looking at high frequency components. 
+    # We can estimate this by looking at high frequency components.
     # A simple way of doing it in the time domain is the ratio of high-order difference variance
     # to standard signal variance, or using spectral estimates.
     if len(clean_sig) > 10:
@@ -77,13 +80,13 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
     else:
         hf_noise_ratio = 0.0
     metrics['hf_noise_ratio'] = hf_noise_ratio
-    
+
     # 5. Baseline Drift Severity
     # Drift can be approximated by comparing a moving average with standard variance
     if len(clean_sig) > int(fs * 2):
         window_len = int(fs * 2)
         # Compute dynamic moving average using uniform filter or simply sum
-        cumsum = np.cumsum(np.insert(clean_sig, 0, 0)) 
+        cumsum = np.cumsum(np.insert(clean_sig, 0, 0))
         moving_avg = (cumsum[window_len:] - cumsum[:-window_len]) / window_len
         drift_var = np.var(moving_avg)
         sig_var = np.var(clean_sig)
@@ -94,18 +97,18 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
     else:
         baseline_drift_ratio = 0.0
     metrics['baseline_drift_ratio'] = baseline_drift_ratio
-    
+
     # Final Decision logic
     status = 'GOOD'
     details = []
-    
+
     if missing_ratio > 0.05:
         status = 'POOR'
         details.append(f"High ratio of missing data: {missing_ratio:.1%}")
     elif missing_ratio > 0.01:
         status = 'ACCEPTABLE'
         details.append(f"Minor missing data: {missing_ratio:.1%}")
-        
+
     if flatline_ratio > 0.15:
         status = 'POOR'
         details.append(f"Significant flatlining/saturation: {flatline_ratio:.1%}")
@@ -113,7 +116,7 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
         if status != 'POOR':
             status = 'ACCEPTABLE'
         details.append(f"Minor flatlining: {flatline_ratio:.1%}")
-        
+
     if extreme_ratio > 0.05:
         status = 'POOR'
         details.append(f"Extreme voltage spikes/artifacts: {extreme_ratio:.1%}")
@@ -121,7 +124,7 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
         if status != 'POOR':
             status = 'ACCEPTABLE'
         details.append(f"Minor voltage spikes: {extreme_ratio:.1%}")
-    
+
     if hf_noise_ratio > 0.4:
         status = 'POOR'
         details.append("Excessive high-frequency power (muscle tremors / interference)")
@@ -129,7 +132,7 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
         if status != 'POOR':
             status = 'ACCEPTABLE'
         details.append("Significant high-frequency noise")
-        
+
     if baseline_drift_ratio > 0.6:
         status = 'POOR'
         details.append("Severe baseline wander/drift")
@@ -137,8 +140,20 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
         if status != 'POOR':
             status = 'ACCEPTABLE'
         details.append("Moderate baseline wander")
-        
+
+    # --- Numeric SQI score (0-100), derived from the same five signals above ---
+    # Each component contributes a penalty capped so no single metric alone can
+    # swing the score to zero; weights roughly mirror the severity thresholds above.
+    penalty = 0.0
+    penalty += min(35.0, missing_ratio * 700.0)          # 5% missing -> 35 pts
+    penalty += min(30.0, flatline_ratio * 200.0)          # 15% flatline -> 30 pts
+    penalty += min(20.0, extreme_ratio * 400.0)           # 5% extreme -> 20 pts
+    penalty += min(20.0, max(0.0, hf_noise_ratio - 0.05) * 50.0)   # scales past a small baseline
+    penalty += min(15.0, max(0.0, baseline_drift_ratio - 0.1) * 25.0)
+    sqi_score = int(round(max(0.0, 100.0 - penalty)))
+    metrics['sqi_score'] = sqi_score
+
     metrics['status'] = status
     metrics['details'] = "; ".join(details) if details else "Signal shows low noise and high consistency."
-    
+
     return metrics

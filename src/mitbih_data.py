@@ -1,17 +1,5 @@
 """
 Real-recording support: MIT-BIH Arrhythmia Database (PhysioNet).
-
-This module turns the already-present WFDB download/load helpers in
-data_loader.py into an actual training data source. Nothing here runs
-automatically — you explicitly download the records you want, then point
-the training script at them. That keeps the app itself (Streamlit UI)
-usable fully offline with the synthetic generator, while giving you a real,
-literature-standard dataset when you want to train on it.
-
-Reference: MIT-BIH Arrhythmia Database, Moody & Mark (2001), PhysioNet.
-https://physionet.org/content/mitdb/1.0.0/
-AAMI EC57 beat classes: N (normal), S (supraventricular ectopic),
-V (ventricular ectopic), F (fusion), Q (unknown/paced - excluded here).
 """
 
 import os
@@ -22,9 +10,6 @@ from src.data_loader import download_mitbih_record, load_mitbih_record
 from src.preprocessing import full_dsp_pipeline
 from src.feature_extraction import extract_beat_features
 
-# --- Official de Chazal et al. patient-independent train/test split ---
-# (the split used by most published MIT-BIH beat classifiers; keeps all
-# beats from one patient on one side, avoiding patient leakage)
 MITBIH_DS1 = [
     "101", "106", "108", "109", "112", "114", "115", "116", "118", "119",
     "122", "124", "201", "203", "205", "207", "208", "209", "215", "220",
@@ -35,16 +20,10 @@ MITBIH_DS2 = [
     "210", "212", "213", "214", "219", "221", "222", "228", "231", "232",
     "233", "234",
 ]
-# Records 102, 104, 107, 217 are excluded (AAMI recommendation: they
-# contain paced beats and are not comparable to the rest of the database).
 MITBIH_FULL = MITBIH_DS1 + MITBIH_DS2
 
-# A small, fast subset for a quick first run (covers normal + all three
-# arrhythmia classes so the model isn't trained on N-only data).
 MITBIH_QUICK = ["100", "106", "119", "200", "201", "203", "208", "223"]
 
-# AAMI EC57 beat-symbol -> superclass mapping. Symbols not listed here
-# (paced, unclassifiable, non-beat annotations) are dropped.
 AAMI_MAP = {
     "N": "N", "L": "N", "R": "N", "e": "N", "j": "N",
     "A": "S", "a": "S", "J": "S", "S": "S",
@@ -58,11 +37,6 @@ def map_aami_label(symbol: str):
 
 
 def download_mitbih_dataset(record_ids=None, dest_dir: str = "data/mitbih") -> list:
-    """
-    Downloads the given MIT-BIH records from PhysioNet (~1-2 MB per record).
-    Requires internet access to physionet.org on the machine running this.
-    Returns the list of record IDs that downloaded successfully.
-    """
     record_ids = record_ids or MITBIH_QUICK
     os.makedirs(dest_dir, exist_ok=True)
     ok = []
@@ -77,7 +51,6 @@ def download_mitbih_dataset(record_ids=None, dest_dir: str = "data/mitbih") -> l
 
 
 def available_mitbih_records(dest_dir: str = "data/mitbih") -> list:
-    """Record IDs that have a complete local .hea/.dat/.atr set already."""
     if not os.path.isdir(dest_dir):
         return []
     ids = set()
@@ -92,8 +65,6 @@ def available_mitbih_records(dest_dir: str = "data/mitbih") -> list:
 
 
 def _select_channel(signal: np.ndarray, sig_name) -> np.ndarray:
-    """MIT-BIH records have 2 leads; prefer MLII (the standard lead used
-    in nearly all published MIT-BIH beat-classification work)."""
     if signal.ndim == 1:
         return signal
     if sig_name:
@@ -104,14 +75,6 @@ def _select_channel(signal: np.ndarray, sig_name) -> np.ndarray:
 
 
 def generate_ml_features_dataset_from_mitbih(record_ids=None, dest_dir: str = "data/mitbih") -> pd.DataFrame:
-    """
-    Loads locally-downloaded MIT-BIH records, runs the same DSP pipeline
-    and feature extractor used elsewhere in the app, and labels each beat
-    with its cardiologist annotation (mapped to the AAMI N/S/V/F classes).
-    record_id in the output is the real patient record number (e.g.
-    "mitbih_208"), so the record-level train/test split keeps a patient's
-    beats out of both sets at once - no patient leakage.
-    """
     record_ids = record_ids or available_mitbih_records(dest_dir)
     if not record_ids:
         raise FileNotFoundError(

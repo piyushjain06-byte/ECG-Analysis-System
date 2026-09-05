@@ -33,7 +33,14 @@ def run_full_analysis(
     bp_high=40.0,
     bp_order=4,
     model_name="Random Forest",
+    run_prediction=True,
 ):
+    """
+    run_prediction=False skips the ML inference step (feature extraction is
+    still performed). Used by the DSP-controls page so tweaking a filter
+    slider does not also re-run the classifier on every rerun - prediction
+    is only recomputed on the ML Prediction page itself.
+    """
     sig_raw = validate_ecg_signal(sig_raw, fs)
     quality = assess_signal_quality(sig_raw, fs=fs)
     sig_clean, stages = full_dsp_pipeline(
@@ -58,13 +65,15 @@ def run_full_analysis(
     bands_raw = compute_spectral_energy_bands(freqs_raw, mag_raw)
     bands_clean = compute_spectral_energy_bands(freqs, mag_clean)
     feat_df = extract_beat_features(sig_clean, peaks, fs=fs)
-    pred_df = predict_ecg_beats(sig_clean, peaks, fs=fs, model_name=model_name)
 
+    pred_df = None
     dominant = None
     confidence = None
-    if pred_df is not None and not pred_df.empty:
-        dominant = pred_df["predicted_label"].mode()[0]
-        confidence = float(pred_df.loc[pred_df["predicted_label"] == dominant, "confidence"].mean())
+    if run_prediction:
+        pred_df = predict_ecg_beats(sig_clean, peaks, fs=fs, model_name=model_name)
+        if pred_df is not None and not pred_df.empty:
+            dominant = pred_df["predicted_label"].mode()[0]
+            confidence = float(pred_df.loc[pred_df["predicted_label"] == dominant, "confidence"].mean())
 
     return {
         "quality": quality,
@@ -87,4 +96,5 @@ def run_full_analysis(
         "dominant_class": dominant,
         "confidence": confidence,
         "model_name": model_name,
+        "prediction_ran": run_prediction,
     }

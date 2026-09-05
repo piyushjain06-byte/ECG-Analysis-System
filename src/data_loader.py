@@ -19,23 +19,23 @@ def download_mitbih_record(record_id: str, destination_dir: str) -> bool:
     os.makedirs(destination_dir, exist_ok=True)
     base_url = f"https://physionet.org/files/mitdb/1.0.0/{record_id}"
     extensions = [".hea", ".dat", ".atr"]
-    
+
     success = True
     for ext in extensions:
         file_url = base_url + ext
         target_path = os.path.join(destination_dir, record_id + ext)
-        
+
         # Skip if already exists and has size > 0
         if os.path.exists(target_path) and os.path.getsize(target_path) > 0:
             continue
-            
+
         try:
             print(f"Downloading {file_url}...")
             urllib.request.urlretrieve(file_url, target_path)
         except Exception as e:
             print(f"Failed to download {file_url}: {e}")
             success = False
-            
+
     return success
 
 
@@ -50,9 +50,9 @@ def load_mitbih_record(record_id: str, data_dir: str):
     """
     if not HAS_WFDB:
         raise ImportError("wfdb library is not installed or importable.")
-        
+
     record_path = os.path.join(data_dir, record_id)
-    
+
     try:
         # Load signals and header info
         record = wfdb.rdrecord(record_path)
@@ -67,7 +67,7 @@ def load_mitbih_record(record_id: str, data_dir: str):
         }
     except Exception as e:
          raise IOError(f"Error loading record files for {record_id} in {data_dir}: {e}")
-         
+
     # Try loading annotations if .atr file exists
     ann_sample = None
     ann_symbol = None
@@ -79,7 +79,7 @@ def load_mitbih_record(record_id: str, data_dir: str):
             ann_symbol = annotation.symbol
         except Exception as e:
             print(f"Warning: could not load annotations for {record_id}: {e}")
-            
+
     return signal, fields, ann_sample, ann_symbol
 
 
@@ -155,8 +155,8 @@ def generate_gaussian_wave(t, amplitude, position, width):
     return amplitude * np.exp(-((t - position) ** 2) / (2 * (width ** 2)))
 
 
-def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0, 
-                           heart_rate: float = 72.0, rhythm_type: str = 'normal', 
+def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
+                           heart_rate: float = 72.0, rhythm_type: str = 'normal',
                            noise_level: float = 0.05, power_noise_level: float = 0.02,
                            baseline_noise_level: float = 0.15, seed: int = None):
     """
@@ -178,11 +178,11 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
     """
     total_samples = int(duration * fs)
     time_axis = np.arange(total_samples) / fs
-    
+
     # Establish beat annotations
     ann_sample = []
     ann_symbol = []
-    
+
     # Normal beat params (times in seconds relative to R-peak)
     normal_params = {
         'P': {'amp': 0.12, 'pos': -0.18, 'wid': 0.018},
@@ -191,7 +191,7 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
         'S': {'amp': -0.28, 'pos': 0.05, 'wid': 0.012},
         'T': {'amp': 0.28, 'pos': 0.28, 'wid': 0.038}
     }
-    
+
     # Ventricular Ectopic Beat (PVC) params (wide, no P, T inverted and huge)
     pvc_params = {
         'P': {'amp': 0.0, 'pos': -0.18, 'wid': 0.018},
@@ -200,7 +200,7 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
         'S': {'amp': -0.65, 'pos': 0.07, 'wid': 0.040},
         'T': {'amp': -0.42, 'pos': 0.28, 'wid': 0.060}
     }
-    
+
     # Supraventricular Ectopic Beat (APC) params (normal shape, but early)
     apc_params = {
         'P': {'amp': -0.06, 'pos': -0.14, 'wid': 0.015}, # Inverted/smaller P
@@ -209,7 +209,7 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
         'S': {'amp': -0.25, 'pos': 0.05, 'wid': 0.012},
         'T': {'amp': 0.26, 'pos': 0.28, 'wid': 0.038}
     }
-    
+
     # Fusion Beat (F) params (intermediate shape)
     fusion_params = {
         'P': {'amp': 0.05, 'pos': -0.16, 'wid': 0.018},
@@ -225,7 +225,7 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
         target_hr = 45.0
     elif rhythm_type == 'tachycardia':
         target_hr = 120.0
-        
+
     mean_rr = 60.0 / target_hr
 
     def _jitter_params(base_params, amp_frac=0.22, wid_frac=0.20, pos_abs=0.008):
@@ -241,12 +241,12 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
                 'wid': max(0.003, w['wid'] * (1.0 + np.random.normal(0, wid_frac))),
             }
         return out
-    
+
     # Generate beat times
     current_time = 0.35 # Padding at start
     beat_times = []
     beat_types = []
-    
+
     # Construct sequence of beats
     if seed is not None:
         np.random.seed(seed)
@@ -254,11 +254,11 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
         # Default next interval
         rr = mean_rr
         btype = 'N'
-        
+
         if rhythm_type == 'arrhythmia':
             # Introduce HRV variance
             rr += np.random.normal(0, 0.03 * mean_rr)
-            
+
             # Probability-based anomalies. Multipliers are randomized (not
             # fixed) so RR-based features have realistic within-class spread
             # and some overlap between classes - a fixed multiplier per class
@@ -285,23 +285,23 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
                     beat_types.append('F')
                     current_time += rr_early
                     rr = mean_rr * np.clip(np.random.normal(1.15, 0.09), 0.95, 1.40)
-                    
+
         beat_times.append(current_time + rr)
         beat_types.append(btype)
         current_time += rr
-        
+
     # Generate ECG signal
     ecg_signal = np.zeros(total_samples)
-    
+
     for b_time, b_type in zip(beat_times, beat_types):
         # Peak index in sample index
         peak_idx = int(b_time * fs)
         if peak_idx >= total_samples:
             continue
-            
+
         ann_sample.append(peak_idx)
         ann_symbol.append(b_type)
-        
+
         # Pick parameters based on beat type
         if b_type == 'N':
             params = normal_params
@@ -314,15 +314,15 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
         else:
             params = normal_params
         params = _jitter_params(params)
-            
+
         # Draw the waves
         # Determine the window around R-peak (e.g. -0.4s to +0.5s)
         start_t = max(0.0, b_time - 0.4)
         end_t = min(duration, b_time + 0.6)
-        
+
         start_idx = int(start_t * fs)
         end_idx = int(end_t * fs)
-        
+
         for idx in range(start_idx, end_idx):
             t = (idx / fs) - b_time
             val = 0.0
@@ -338,13 +338,13 @@ def generate_synthetic_ecg(duration: float = 60.0, fs: float = 360.0,
         baseline_noise_level * 0.3 * np.cos(2 * np.pi * 0.05 * time_axis)
     )
     ecg_signal += slow_drift
-    
+
     # Noise 2: Power-line interference (50 Hz or 60 Hz sinusoidal noise)
     power_noise = power_noise_level * np.sin(2 * np.pi * 50.0 * time_axis)
     ecg_signal += power_noise
-    
+
     # Noise 3: High-frequency EMG/muscle noise
     hf_noise = np.random.normal(0, noise_level, total_samples)
     ecg_signal += hf_noise
-    
+
     return ecg_signal, fs, np.array(ann_sample), ann_symbol
