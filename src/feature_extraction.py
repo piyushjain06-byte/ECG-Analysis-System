@@ -3,6 +3,49 @@ import pandas as pd
 from scipy.stats import skew, kurtosis
 from scipy.fft import fft
 
+
+def measure_qrs_morphology(signal: np.ndarray, peaks: np.ndarray, fs: float):
+    """Estimate QRS width/amplitude from threshold crossings around each R peak.
+
+    Width is quantized to the sample interval and is an estimate, not a
+    clinical caliper measurement. Amplitude is reported in input signal units.
+    """
+    x = np.asarray(signal, dtype=float)
+    before = max(2, int(round(0.12 * fs)))
+    after = max(2, int(round(0.12 * fs)))
+    noise_window = max(2, int(round(0.02 * fs)))
+    rows = []
+    for peak in np.asarray(peaks, dtype=int):
+        lo, hi = max(0, peak - before), min(len(x), peak + after + 1)
+        if hi - lo < 3 or peak < lo or peak >= hi:
+            rows.append({"qrs_duration_est": np.nan, "qrs_amplitude_est": np.nan})
+            continue
+        left_base = np.median(x[max(0, peak - before):max(1, peak - before + noise_window)])
+        right_base = np.median(x[min(len(x), peak + after - noise_window + 1):peak + after + 1])
+        baseline = float(np.median([left_base, right_base]))
+        segment = x[lo:hi]
+        apex = lo + int(np.argmax(np.abs(segment - baseline)))
+        excursion = abs(x[apex] - baseline)
+        noise = 1.4826 * np.median(np.abs(segment - np.median(segment)))
+        threshold = max(0.1 * excursion, 3.0 * noise)
+        active = np.abs(segment - baseline) >= threshold
+        pivot = peak - lo
+        if not active[pivot]:
+            rows.append({"qrs_duration_est": np.nan, "qrs_amplitude_est": np.nan})
+            continue
+        start = pivot
+        end = pivot
+        while start > 0 and active[start - 1]:
+            start -= 1
+        while end + 1 < len(active) and active[end + 1]:
+            end += 1
+        qrs = segment[start:end + 1]
+        rows.append({
+            "qrs_duration_est": float((end - start + 1) / fs),
+            "qrs_amplitude_est": float(np.ptp(qrs)),
+        })
+    return pd.DataFrame(rows)
+
 def extract_beat_features(signal: np.ndarray, peaks: np.ndarray, fs: float = 360.0, labels: list = None):
     num_peaks = len(peaks)
     if num_peaks == 0:

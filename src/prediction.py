@@ -88,10 +88,14 @@ def predict_ecg_beats(signal: np.ndarray, peaks: np.ndarray, fs: float = 360.0, 
 
     # Package results into a final DataFrame
     feat_df['predicted_label'] = preds_label
-    feat_df['confidence'] = np.max(probs, axis=1)
+    model_class_to_column = {class_id: idx for idx, class_id in enumerate(clf.classes_)}
+    predicted_columns = np.asarray([model_class_to_column[class_id] for class_id in preds_int])
+    feat_df['confidence'] = probs[np.arange(len(preds_int)), predicted_columns]
 
     # Map raw probability arrays
-    for idx, class_name in enumerate(label_encoder.classes_):
-         feat_df[f'prob_{class_name}'] = probs[:, idx]
+    for class_id, class_name in enumerate(label_encoder.classes_):
+         model_column = model_class_to_column.get(class_id)
+         if model_column is not None:
+             feat_df[f'prob_{class_name}'] = probs[:, model_column]
 
     return feat_df
