@@ -1,13 +1,15 @@
 import numpy as np
 from scipy import signal as sig
-from scipy.fft import fft, fftfreq
 
 def pan_tompkins_detector(data: np.ndarray, fs: float = 360.0):
+    if not np.isfinite(fs) or fs <= 30.0:
+        raise ValueError("Sampling frequency must be greater than 30 Hz for 5–15 Hz QRS detection.")
+
     nyq = 0.5 * fs
     low = 5.0 / nyq
     high = 15.0 / nyq
-    b, a = sig.butter(3, [low, high], btype='band')
-    filt_ecg = sig.filtfilt(b, a, data)
+    sos = sig.butter(3, [low, high], btype="band", output="sos")
+    filt_ecg = sig.sosfiltfilt(sos, data)
 
     der_ecg = np.zeros_like(filt_ecg)
     der_ecg[4:] = (
@@ -98,19 +100,24 @@ def analyze_rr_intervals(peaks: np.ndarray, fs: float = 360.0):
 
 
 def compute_fft_spectrum(signal: np.ndarray, fs: float = 360.0):
-    n = len(signal)
+    signal = np.asarray(signal, dtype=float)
+    n = signal.size
     if n == 0:
         return np.array([]), np.array([]), 0.0
+    if signal.ndim != 1:
+        raise ValueError("FFT input must be a one-dimensional signal.")
+    if not np.isfinite(fs) or fs <= 0:
+        raise ValueError("Sampling frequency must be a finite positive number.")
 
     detrended = signal - np.mean(signal)
-
-    fft_vals = fft(detrended)
-    fft_freqs = fftfreq(n, 1.0 / fs)
-
-    pos_mask = fft_freqs >= 0
-    freqs = fft_freqs[pos_mask]
-    magnitude = np.abs(fft_vals[pos_mask]) / n
-    magnitude[1:] = 2.0 * magnitude[1:]
+    fft_vals = np.fft.rfft(detrended)
+    freqs = np.fft.rfftfreq(n, 1.0 / fs)
+    magnitude = np.abs(fft_vals) / n
+    if n > 1:
+        if n % 2 == 0:
+            magnitude[1:-1] *= 2.0
+        else:
+            magnitude[1:] *= 2.0
 
     search_mask = freqs >= 0.2
     if np.sum(search_mask) > 0:
@@ -132,8 +139,8 @@ def compute_psd_welch(signal: np.ndarray, fs: float = 360.0, nperseg: int = None
     if n == 0:
         return np.array([]), np.array([])
     if nperseg is None:
-        nperseg = min(n, int(fs * 4))
-    nperseg = max(8, min(nperseg, n))
+        nperseg = min(n, max(8, int(fs * 4)))
+    nperseg = min(max(1, nperseg), n)
     freqs, psd = sig.welch(signal, fs=fs, nperseg=nperseg)
     return freqs, psd
 

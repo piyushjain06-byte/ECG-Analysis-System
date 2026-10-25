@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import signal as scipy_signal
 
 def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
     """
@@ -25,6 +26,8 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
             'hf_noise_ratio': 1.0,
             'details': "Empty signal received."
         }
+    if not np.isfinite(fs) or fs <= 0:
+        raise ValueError("Sampling frequency must be a finite positive number.")
 
     signal = np.asarray(signal)
     total_len = len(signal)
@@ -50,12 +53,16 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
         mean_val = np.nanmean(signal) if not np.isnan(np.nanmean(signal)) else 0.0
         clean_sig[np.isnan(clean_sig) | np.isinf(clean_sig)] = mean_val
 
-    # 2. Flatline / Saturation (where consecutive values are exactly the same)
-    # Detect sequences of length >= 10 with identical values
-    diff = np.diff(clean_sig)
-    flat_diff = (diff == 0.0).astype(int)
-    # Count how many samples are in flat segments
-    flatline_ratio = float(np.sum(flat_diff) / total_len)
+    # 2. Flatline / Saturation: only count repeated runs of at least 10 samples.
+    flat_diff = np.diff(clean_sig) == 0.0
+    flatline_samples = np.zeros(total_len, dtype=bool)
+    if np.any(flat_diff):
+        starts = np.flatnonzero(flat_diff & np.r_[True, ~flat_diff[:-1]])
+        ends = np.flatnonzero(flat_diff & np.r_[~flat_diff[1:], True])
+        for start, end in zip(starts, ends):
+            if end - start + 2 >= 10:
+                flatline_samples[start:end + 2] = True
+    flatline_ratio = float(np.mean(flatline_samples))
     metrics['flatline_ratio'] = flatline_ratio
 
     # 3. Extreme Amplitudes (physiologically, ECGs rarely exceed 4.0 mV or are less than -4.0 mV)
@@ -64,21 +71,14 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
     extreme_ratio = float(extreme_count / total_len)
     metrics['extreme_ratio'] = extreme_ratio
 
-    # 4. High-Frequency Noise (muscle artifact estimation)
-    # We can estimate this by looking at high frequency components.
-    # A simple way of doing it in the time domain is the ratio of high-order difference variance
-    # to standard signal variance, or using spectral estimates.
-    if len(clean_sig) > 10:
-        # High pass approximation: difference of difference
-        hf_estimate = np.diff(clean_sig, n=2)
-        hf_var = np.var(hf_estimate)
-        sig_var = np.var(clean_sig)
-        if sig_var > 1e-6:
-            hf_noise_ratio = float(hf_var / sig_var)
-        else:
-            hf_noise_ratio = 1.0  # Signal has no variance
-    else:
-        hf_noise_ratio = 0.0
+    # 4. High-frequency power fraction, estimated from a Welch PSD so the
+    # result is interpretable and does not scale with the sampling rate.
+    nperseg = min(total_len, max(8, int(fs * 4)))
+    freqs, psd = scipy_signal.welch(clean_sig, fs=fs, nperseg=nperseg)
+    total_power = float(np.sum(psd))
+    hf_cutoff = min(40.0, 0.8 * (fs / 2.0))
+    hf_power = float(np.sum(psd[freqs >= hf_cutoff]))
+    hf_noise_ratio = hf_power / total_power if total_power > 1e-12 else 0.0
     metrics['hf_noise_ratio'] = hf_noise_ratio
 
     # 5. Baseline Drift Severity
@@ -125,10 +125,10 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
             status = 'ACCEPTABLE'
         details.append(f"Minor voltage spikes: {extreme_ratio:.1%}")
 
-    if hf_noise_ratio > 0.4:
+    if hf_noise_ratio > 0.30:
         status = 'POOR'
         details.append("Excessive high-frequency power (muscle tremors / interference)")
-    elif hf_noise_ratio > 0.15:
+    elif hf_noise_ratio > 0.10:
         if status != 'POOR':
             status = 'ACCEPTABLE'
         details.append("Significant high-frequency noise")
@@ -146,7 +146,7 @@ def assess_signal_quality(signal: np.ndarray, fs: float = 360.0):
     # swing the score to zero; weights roughly mirror the severity thresholds above.
     penalty = 0.0
     penalty += min(35.0, missing_ratio * 700.0)          # 5% missing -> 35 pts
-    penalty += min(30.0, flatline_ratio * 200.0)          # 15% flatline -> 30 pts
+    penalty += min(50.0, flatline_ratio * (50.0 / 0.15))  # 15% flatline -> 50 pts
     penalty += min(20.0, extreme_ratio * 400.0)           # 5% extreme -> 20 pts
     penalty += min(20.0, max(0.0, hf_noise_ratio - 0.05) * 50.0)   # scales past a small baseline
     penalty += min(15.0, max(0.0, baseline_drift_ratio - 0.1) * 25.0)

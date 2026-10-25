@@ -12,6 +12,7 @@ from src.feature_extraction import extract_beat_features
 from src.history_db import save_analysis_history, get_analysis_history, clear_analysis_history
 from src.pipeline import run_full_analysis
 from src.mitbih_data import map_aami_label, AAMI_MAP
+from src.visualization import make_ecg_figure
 
 
 def test_synthetic_generation():
@@ -43,6 +44,29 @@ def test_signal_quality_metrics():
     assert flat_metrics['status'] == 'POOR'
     assert 'flatlin' in flat_metrics['details'].lower()
     assert flat_metrics['sqi_score'] <= 50
+
+
+def test_signal_quality_uses_spectral_noise_fraction_and_long_flat_runs():
+    fs = 360.0
+    time = np.arange(int(10 * fs)) / fs
+    low_frequency_signal = np.sin(2 * np.pi * 2.0 * time)
+    noisy_signal = low_frequency_signal + np.sin(2 * np.pi * 90.0 * time)
+
+    clean_metrics = assess_signal_quality(low_frequency_signal, fs=fs)
+    noisy_metrics = assess_signal_quality(noisy_signal, fs=fs)
+    assert clean_metrics["hf_noise_ratio"] < 0.01
+    assert noisy_metrics["hf_noise_ratio"] > 0.30
+    assert noisy_metrics["status"] == "POOR"
+
+    brief_repeats = low_frequency_signal.copy()
+    brief_repeats[100:106] = brief_repeats[99]
+    brief_metrics = assess_signal_quality(brief_repeats, fs=fs)
+    assert brief_metrics["flatline_ratio"] == 0.0
+
+    long_flatline = low_frequency_signal.copy()
+    long_flatline[100:200] = long_flatline[99]
+    flat_metrics = assess_signal_quality(long_flatline, fs=fs)
+    assert flat_metrics["flatline_ratio"] > 0.02
 
 
 def test_filtering_pipeline():
@@ -89,6 +113,36 @@ def test_rr_variability_analytics():
     assert metrics['mean_hr'] == pytest.approx(60.0, abs=1.0)
     assert metrics['std_rr_sdrr'] == pytest.approx(0.0, abs=1.0)
     assert metrics['rmssd'] == pytest.approx(0.0, abs=1.0)
+
+
+def test_fft_is_single_sided_and_preserves_nyquist_amplitude():
+    fs = 100.0
+    n = 1000
+    time = np.arange(n) / fs
+    amplitude = 1.7
+
+    freqs, magnitude, dominant = compute_fft_spectrum(
+        amplitude * np.sin(2 * np.pi * 10.0 * time), fs=fs,
+    )
+    assert freqs[-1] == pytest.approx(fs / 2)
+    assert magnitude[np.argmax(magnitude)] == pytest.approx(amplitude, abs=1e-12)
+    assert dominant == pytest.approx(10.0)
+
+    nyquist_signal = amplitude * (-1.0) ** np.arange(n)
+    nyquist_freqs, nyquist_magnitude, _ = compute_fft_spectrum(nyquist_signal, fs=fs)
+    assert nyquist_freqs[-1] == pytest.approx(fs / 2)
+    assert nyquist_magnitude[-1] == pytest.approx(amplitude, abs=1e-12)
+
+
+def test_ecg_chart_uses_light_theme_and_interpolates_peak_markers():
+    time = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
+    signal = np.array([0.0, 1.0, 0.0, -1.0, 0.0])
+
+    fig = make_ecg_figure(time, signal, "ECG", peaks=np.array([0.25, 0.75]))
+
+    assert list(fig.data[1].y) == [1.0, -1.0]
+    assert fig.layout.paper_bgcolor == "#FFFFFF"
+    assert fig.layout.yaxis.title.text == "Amplitude (input units)"
 
 
 def test_features_matrix_extraction():

@@ -74,6 +74,12 @@ Open the app, click **Analyze demo ECG**, then walk through
 **DSP Analysis to ECG Features to ML Prediction**. Models are already
 trained on synthetic data, so this works with zero setup.
 
+For a WFDB upload, select the record's matching `.dat` and `.hea` files
+together; include the matching `.atr` file if annotations are available.
+CSV uploads can provide a time column and ECG values, or a single ECG-value
+column. Uploaded CSV amplitudes retain their original units in chart and
+report labels.
+
 ## Training on real recordings (MIT-BIH Arrhythmia Database)
 
 ```bash

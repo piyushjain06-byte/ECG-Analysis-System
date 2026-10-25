@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 
 import numpy as np
 import pandas as pd
@@ -168,50 +169,79 @@ def render_home_page():
 
     with c2:
         st.markdown("#### Upload recording")
-        uploaded = st.file_uploader("CSV (`time,ecg` or a single ECG column) or WFDB `.dat`", type=["csv", "dat"])
+        uploaded_files = st.file_uploader(
+            "CSV, or a WFDB record bundle (`.dat` + matching `.hea`, optional `.atr`)",
+            type=["csv", "dat", "hea", "atr"],
+            accept_multiple_files=True,
+            help="Select a single CSV, or select the matching WFDB files together.",
+        )
         fs_input = st.number_input("Sampling frequency if missing (Hz)", 1.0, 2000.0, 360.0, 1.0)
         if st.button("Analyze uploaded file", use_container_width=True):
-            if uploaded is None:
+            if not uploaded_files:
                 st.error("Choose a file first.")
-            elif uploaded.size == 0:
-                st.error("The uploaded file is empty (0 bytes).")
+            elif any(file.size == 0 for file in uploaded_files):
+                st.error("At least one selected file is empty (0 bytes).")
             else:
-                os.makedirs("data/raw", exist_ok=True)
-                temp_path = os.path.join("data/raw", uploaded.name)
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded.getbuffer())
-                try:
-                    if uploaded.name.lower().endswith(".csv"):
-                        sig, fs = load_csv_record(temp_path, default_fs=fs_input)
-                        st.session_state["ann_sample"] = None
-                        st.session_state["ann_symbol"] = None
-                        _load_and_analyze(sig, fs, uploaded.name.rsplit(".", 1)[0], False)
+                csv_files = [file for file in uploaded_files if file.name.lower().endswith(".csv")]
+                if csv_files:
+                    if len(uploaded_files) != 1 or len(csv_files) != 1:
+                        st.error("Select one CSV file by itself, or select a matching WFDB record bundle.")
                     else:
-                        hea = temp_path.replace(".dat", ".hea")
-                        if not os.path.exists(hea):
-                            st.error(
-                                "WFDB `.dat` needs a matching `.hea` file (and ideally `.atr`) "
-                                "uploaded into `data/raw/` alongside it - a `.dat` file alone "
-                                "has no header describing the signal."
-                            )
+                        uploaded = csv_files[0]
+                        try:
+                            with tempfile.TemporaryDirectory(prefix="ecg-upload-") as upload_dir:
+                                temp_path = os.path.join(upload_dir, os.path.basename(uploaded.name))
+                                with open(temp_path, "wb") as output:
+                                    output.write(uploaded.getbuffer())
+                                sig, fs = load_csv_record(temp_path, default_fs=fs_input)
+                            if _load_and_analyze(sig, fs, os.path.splitext(uploaded.name)[0], False):
+                                st.session_state["ann_sample"] = None
+                                st.session_state["ann_symbol"] = None
+                        except ValueError as e:
+                            st.error(f"Could not read this file: {e}")
+                        except Exception as e:
+                            st.error(f"Unsupported or unreadable ECG file. {e}")
+                else:
+                    dat_files = [file for file in uploaded_files if file.name.lower().endswith(".dat")]
+                    hea_files = [file for file in uploaded_files if file.name.lower().endswith(".hea")]
+                    atr_files = [file for file in uploaded_files if file.name.lower().endswith(".atr")]
+                    if len(dat_files) != 1 or len(hea_files) != 1 or len(uploaded_files) not in (2, 3):
+                        st.error("A WFDB upload needs exactly one `.dat`, its matching `.hea`, and optionally one `.atr` file.")
+                    else:
+                        record_stem = os.path.splitext(os.path.basename(dat_files[0].name))[0]
+                        matching_files = [dat_files[0], hea_files[0], *atr_files]
+                        if any(
+                            os.path.splitext(os.path.basename(file.name))[0].casefold() != record_stem.casefold()
+                            for file in matching_files
+                        ):
+                            st.error("WFDB `.dat`, `.hea`, and optional `.atr` files must share the same record name.")
                         else:
-                            import wfdb
-
-                            rec = wfdb.rdrecord(temp_path.replace(".dat", ""))
-                            sig = rec.p_signal[:, 0] if rec.p_signal.ndim > 1 else rec.p_signal
-                            st.session_state["ann_sample"] = None
-                            st.session_state["ann_symbol"] = None
                             try:
-                                ann = wfdb.rdann(temp_path.replace(".dat", ""), "atr")
-                                st.session_state["ann_sample"] = ann.sample
-                                st.session_state["ann_symbol"] = ann.symbol
-                            except Exception:
-                                pass
-                            _load_and_analyze(sig, rec.fs, uploaded.name.rsplit(".", 1)[0], False)
-                except ValueError as e:
-                    st.error(f"Could not read this file: {e}")
-                except Exception as e:
-                    st.error(f"Unsupported or unreadable ECG file. {e}")
+                                import wfdb
+
+                                with tempfile.TemporaryDirectory(prefix="ecg-wfdb-") as upload_dir:
+                                    for file in matching_files:
+                                        file_path = os.path.join(upload_dir, os.path.basename(file.name))
+                                        with open(file_path, "wb") as output:
+                                            output.write(file.getbuffer())
+                                    rec = wfdb.rdrecord(os.path.join(upload_dir, record_stem))
+                                    sig = rec.p_signal[:, 0] if rec.p_signal.ndim > 1 else rec.p_signal
+                                    ann_sample = None
+                                    ann_symbol = None
+                                    if atr_files:
+                                        try:
+                                            ann = wfdb.rdann(os.path.join(upload_dir, record_stem), "atr")
+                                            ann_sample = ann.sample
+                                            ann_symbol = ann.symbol
+                                        except Exception as e:
+                                            st.warning(f"Record loaded, but WFDB annotations could not be read: {e}")
+                                if _load_and_analyze(sig, rec.fs, record_stem, False):
+                                    st.session_state["ann_sample"] = ann_sample
+                                    st.session_state["ann_symbol"] = ann_symbol
+                            except ValueError as e:
+                                st.error(f"Could not read this file: {e}")
+                            except Exception as e:
+                                st.error(f"Unsupported or unreadable WFDB record. {e}")
 
     if not st.session_state.get("data_loaded"):
         st.info("Load a demo or upload a CSV to generate graphs and classification.")
@@ -223,12 +253,12 @@ def render_home_page():
     rr = st.session_state.get("rr_metrics") or {}
 
     st.markdown("### Recording overview")
-    m1, m2, m3, m4, m5 = st.columns(5)
+    m1, m2, m3, m4 = st.columns([1.5, 1, 1, 1])
     m1.metric("Record", st.session_state["record_name"])
     m2.metric("Sampling rate", f"{fs:.0f} Hz")
     m3.metric("Duration", f"{len(sig) / fs:.1f} s")
     m4.metric("Samples", f"{len(sig):,}")
-    m5.metric("Channels", "1")
+    st.caption("The first channel is analyzed when a multi-channel recording is uploaded.")
 
     q_status = st.session_state["quality_status"]
     sqi = q.get("sqi_score")
@@ -303,12 +333,12 @@ def render_dsp_page():
     with g1:
         st.plotly_chart(make_ecg_figure(t, raw_w, "1 · Raw ECG", color=ECG_RED), use_container_width=True)
         st.plotly_chart(
-            make_ecg_figure(t, stages["notch"][i0:i1], "3 · After notch (mains)", color="#A78BFA"),
+            make_ecg_figure(t, stages["notch"][i0:i1], "3 · After notch (mains)", color=PURPLE),
             use_container_width=True,
         )
     with g2:
         st.plotly_chart(
-            make_ecg_figure(t, stages["baseline"][i0:i1], "2 · Baseline-corrected", color="#38BDF8"),
+            make_ecg_figure(t, stages["baseline"][i0:i1], "2 · Baseline-corrected", color="#1565C0"),
             use_container_width=True,
         )
         st.plotly_chart(
@@ -341,10 +371,14 @@ def render_dsp_page():
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=freqs[mask], y=mag_raw[mask], name="Raw spectrum", line=dict(color=ECG_RED, dash="dash", width=1.2)))
     fig.add_trace(go.Scatter(x=freqs[mask], y=mag_c[mask], name="Processed spectrum", line=dict(color=PURPLE, width=1.6)))
-    fig.add_vline(x=50, line_dash="dot", line_color="#94A3B8", annotation_text="50 Hz")
+    for mains_hz in (50, 60):
+        fig.add_vline(
+            x=mains_hz, line_dash="dot", line_color="#718096",
+            annotation_text=f"{mains_hz} Hz", annotation_position="top",
+        )
     fig.update_layout(
-        title=dict(text="Magnitude spectrum", font=dict(color=TITLE_COLOR)),
-        xaxis_title="Frequency (Hz)", yaxis_title="Magnitude", height=320,
+        title=dict(text="Single-sided magnitude spectrum", font=dict(color=TITLE_COLOR)),
+        xaxis_title="Frequency (Hz)", yaxis_title="Amplitude (input units)", height=320,
         plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER, font=dict(color=FONT_COLOR),
         xaxis=dict(gridcolor=GRID, linecolor=AXIS_LINE), yaxis=dict(gridcolor=GRID, linecolor=AXIS_LINE),
         legend=dict(orientation="h", y=1.12),
@@ -361,7 +395,10 @@ def render_dsp_page():
             st.caption("Install PyWavelets to enable this view.")
         else:
             tw, fq, mag = wav
-            heat = go.Figure(data=go.Heatmap(z=mag, x=tw, y=fq, colorscale="Turbo", colorbar=dict(title="|CWT|")))
+            heat = go.Figure(data=go.Heatmap(
+                z=mag, x=tw, y=fq, colorscale="Viridis",
+                colorbar=dict(title="|CWT|", tickfont=dict(color=FONT_COLOR)),
+            ))
             heat.update_layout(
                 title=dict(text="Wavelet energy vs time (non-stationary QRS bursts)", font=dict(color=TITLE_COLOR)),
                 xaxis_title="Time (s)", yaxis_title="Frequency (Hz)", height=340,
@@ -430,7 +467,7 @@ def render_features_page():
         fig_rr.add_trace(
             go.Scatter(
                 x=np.arange(len(rr["rr_intervals"])), y=rr["rr_intervals"],
-                mode="lines+markers", line=dict(color="#FB923C", width=1.6), marker=dict(size=5),
+                mode="lines+markers",                 line=dict(color="#A64B00", width=1.6), marker=dict(size=5, color="#A64B00"),
             )
         )
         fig_rr.update_layout(
@@ -448,8 +485,8 @@ def render_features_page():
             t_pt, _, i0p, i1p = window_signal(pt["filtered"], fs, t0, t1)
             fig_pt = go.Figure()
             for key, name, col in [
-                ("filtered", "5–15 Hz", "#38BDF8"), ("derivative", "Derivative", "#A78BFA"),
-                ("squared", "Squared", "#F472B6"), ("integrated", "Integrated", "#2DD4BF"),
+                ("filtered", "5–15 Hz", "#1565C0"), ("derivative", "Derivative", PURPLE),
+                ("squared", "Squared", "#AD1457"), ("integrated", "Integrated", CLEAN_TEAL),
             ]:
                 fig_pt.add_trace(go.Scatter(x=t_pt, y=pt[key][i0p:i1p], name=name, line=dict(width=1.2, color=col)))
             fig_pt.update_layout(
@@ -673,7 +710,7 @@ def render_performance_page():
     st.dataframe(show, use_container_width=True, hide_index=True)
 
     fig = go.Figure()
-    for col, color in zip(["Accuracy", "Macro F1", "Weighted F1"], ["#38BDF8", "#2DD4BF", "#A78BFA"]):
+    for col, color in zip(["Accuracy", "Macro F1", "Weighted F1"], ["#1565C0", CLEAN_TEAL, PURPLE]):
         fig.add_trace(go.Bar(x=cdf["Model"], y=cdf[col], name=col, marker_color=color))
     fig.update_layout(
         barmode="group", yaxis_title="Score", height=340,

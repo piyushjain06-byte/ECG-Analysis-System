@@ -31,7 +31,7 @@ from src.visualization import (
 
 FS = 360.0
 NYQ = FS / 2.0
-BLUE = "#38BDF8"
+BLUE = "#1565C0"
 
 
 # --------------------------------------------------------------------------- #
@@ -100,6 +100,7 @@ def _style(fig, title="", height=320, xt=None, yt=None):
     fig.update_layout(
         title=dict(text=title, font=dict(color=TITLE_COLOR, size=14)),
         height=height, paper_bgcolor=PAPER, plot_bgcolor=PLOT_BG, font=dict(color=FONT_COLOR),
+        template="plotly_white",
         margin=dict(l=50, r=18, t=46, b=42), legend=dict(orientation="h", y=1.14),
     )
     fig.update_xaxes(gridcolor=GRID, linecolor=AXIS_LINE, zeroline=False)
@@ -182,7 +183,7 @@ def _tab_filters():
         th = np.linspace(0, 2 * np.pi, 400)
         pz = go.Figure()
         pz.add_trace(go.Scatter(x=np.cos(th), y=np.sin(th), mode="lines",
-                                line=dict(color="#94A3B8", dash="dot"), name="unit circle"))
+                                line=dict(color="#64748B", dash="dot"), name="unit circle"))
         pz.add_trace(go.Scatter(x=z.real, y=z.imag, mode="markers", name="zeros",
                                 marker=dict(symbol="circle-open", size=12, color=CLEAN_TEAL, line=dict(width=2))))
         pz.add_trace(go.Scatter(x=p.real, y=p.imag, mode="markers", name="poles",
@@ -241,10 +242,10 @@ def _tab_filtfilt():
         return (lo + int(np.argmax(y[lo:hi])) - p) / FS * 1000.0
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=t, y=noisy[lo:hi], name="Input", line=dict(color="#94A3B8", dash="dot")))
+    fig.add_trace(go.Scatter(x=t, y=noisy[lo:hi], name="Input", line=dict(color="#64748B", dash="dot")))
     fig.add_trace(go.Scatter(x=t, y=yc[lo:hi], name="Causal (sosfilt)", line=dict(color=ECG_RED)))
     fig.add_trace(go.Scatter(x=t, y=yz[lo:hi], name="Zero-phase (sosfiltfilt)", line=dict(color=CLEAN_TEAL)))
-    fig.add_vline(x=0, line_dash="dot", line_color="#94A3B8", annotation_text="true R-peak")
+    fig.add_vline(x=0, line_dash="dot", line_color="#64748B", annotation_text="true R-peak")
     _style(fig, "One heartbeat: causal vs zero-phase", height=360, xt="Time relative to R-peak (ms)", yt="mV")
     _show(fig)
 
@@ -312,7 +313,7 @@ def _tab_sampling():
     a1, a2 = st.columns(2)
     with a1:
         fo = go.Figure(go.Scatter(x=f0, y=s0, line=dict(color=BLUE)))
-        fo.add_vline(x=50, line_dash="dot", line_color="#94A3B8", annotation_text="50 Hz hum")
+        fo.add_vline(x=50, line_dash="dot", line_color="#64748B", annotation_text="50 Hz hum")
         _style(fo, f"Original, fs = {FS:.0f} Hz", height=320, xt="Frequency (Hz)", yt="dB")
         _show(fo)
     with a2:
@@ -443,7 +444,7 @@ def _tab_windowing():
         f, s = spectrum_db(x, FS, w)
         fig.add_trace(go.Scatter(x=f, y=s, name="rectangular" if w == "boxcar" else w, line=dict(color=cols[w])))
     fig.update_yaxes(range=[-140, 5])
-    fig.add_vline(x=f2, line_dash="dot", line_color="#94A3B8", annotation_text="weak tone")
+    fig.add_vline(x=f2, line_dash="dot", line_color="#64748B", annotation_text="weak tone")
     _style(fig, "Spectral leakage", height=380, xt="Frequency (Hz)", yt="dB")
     _show(fig)
     st.caption("Rectangular: narrowest main lobe but high side lobes (weak tone hidden). Hann/Blackman: wider main "
@@ -511,7 +512,7 @@ def _tab_fourier():
     y = np.fft.irfft(Xk, L)
     t = np.arange(L) / FS
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=t, y=seg, name="One beat period", line=dict(color="#94A3B8")))
+    fig.add_trace(go.Scatter(x=t, y=seg, name="One beat period", line=dict(color="#64748B")))
     fig.add_trace(go.Scatter(x=t, y=y, name=f"Reconstruction, {N} harmonics", line=dict(color=CLEAN_TEAL, width=2)))
     _style(fig, f"Fundamental = {f_fund:.2f} Hz; highest harmonic used = {N * f_fund:.1f} Hz", height=340,
            xt="Time (s)", yt="mV")
@@ -579,14 +580,14 @@ def _tab_evaluation():
     fig.add_trace(go.Scatter(x=fr, y=10 * np.log10(pr + 1e-12), name="Before", line=dict(color=ECG_RED)))
     fig.add_trace(go.Scatter(x=fq, y=10 * np.log10(pq + 1e-12), name="After", line=dict(color=CLEAN_TEAL)))
     fig.update_xaxes(range=[0, 80])
-    fig.add_vline(x=50, line_dash="dot", line_color="#94A3B8")
+    fig.add_vline(x=50, line_dash="dot", line_color="#64748B")
     _style(fig, "Power spectral density before vs after", height=340, xt="Frequency (Hz)", yt="dB/Hz")
     _show(fig)
     t = np.arange(len(noisy)) / FS
     s = int(6 * FS)
     ft = go.Figure()
     ft.add_trace(go.Scatter(x=t[:s], y=(proc - ref)[:s], name="Residual noise after filtering", line=dict(color=AMBER)))
-    ft.add_trace(go.Scatter(x=t[:s], y=(noisy - clean)[:s], name="Injected noise", line=dict(color="#94A3B8", width=1)))
+    ft.add_trace(go.Scatter(x=t[:s], y=(noisy - clean)[:s], name="Injected noise", line=dict(color="#64748B", width=1)))
     _style(ft, "Noise before vs after", height=300, xt="Time (s)", yt="mV")
     _show(ft)
     st.caption("SNR out uses the same filter applied to the clean signal as the reference, so it measures noise "

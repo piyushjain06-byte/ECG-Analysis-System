@@ -26,13 +26,13 @@ def generate_pdf_report(record_name: str, fs: float, sig_raw: np.ndarray, sig_pr
     disp_limit = min(len(sig_raw), int(10 * fs))
     ax1.plot(t[:disp_limit], sig_raw[:disp_limit], color='#E74C3C', alpha=0.85, label='Raw ECG')
     ax1.set_title("ECG Preprocessing Stage 1: Raw Artifact-Affected Signal", fontsize=9, fontweight='bold', color='#2C3E50')
-    ax1.set_ylabel("Amplitude (mV)", fontsize=8)
+    ax1.set_ylabel("Amplitude (input units)", fontsize=8)
     ax1.legend(loc='upper right', prop={'size': 7})
 
     ax2.plot(t[:disp_limit], sig_processed[:disp_limit], color='#2ECC71', alpha=0.9, label='Filtered ECG')
     ax2.set_title("ECG Preprocessing Stage 2: Clean Baseline-Removed and Filtered Signal", fontsize=9, fontweight='bold', color='#2C3E50')
     ax2.set_xlabel("Time (seconds)", fontsize=8)
-    ax2.set_ylabel("Amplitude (mV)", fontsize=8)
+    ax2.set_ylabel("Amplitude (input units)", fontsize=8)
     ax2.legend(loc='upper right', prop={'size': 7})
     plt.tight_layout()
 
@@ -46,7 +46,7 @@ def generate_pdf_report(record_name: str, fs: float, sig_raw: np.ndarray, sig_pr
     ax.scatter(disp_peaks / fs, sig_processed[disp_peaks], color='#E74C3C', s=25, zorder=5, label='Detected R-peaks')
     ax.set_title("Time-Domain Analysis: Pan-Tompkins Peak Alignment", fontsize=9, fontweight='bold', color='#2C3E50')
     ax.set_xlabel("Time (seconds)", fontsize=8)
-    ax.set_ylabel("Amplitude (mV)", fontsize=8)
+    ax.set_ylabel("Amplitude (input units)", fontsize=8)
     ax.legend(loc='upper right', prop={'size': 7})
     plt.tight_layout()
 
@@ -59,7 +59,7 @@ def generate_pdf_report(record_name: str, fs: float, sig_raw: np.ndarray, sig_pr
     ax.plot(fft_freqs[disp_freq_mask], fft_mags[disp_freq_mask], color='#9B59B6', linewidth=1.2)
     ax.set_title("Frequency-Domain Analysis: FFT Magnitude Spectrum", fontsize=9, fontweight='bold', color='#2C3E50')
     ax.set_xlabel("Frequency (Hz)", fontsize=8)
-    ax.set_ylabel("Magnitude", fontsize=8)
+    ax.set_ylabel("Amplitude (input units)", fontsize=8)
     plt.tight_layout()
 
     fft_fig_path = f"reports/figures/fft_{timestamp_str}.png"
@@ -133,7 +133,7 @@ def generate_pdf_report(record_name: str, fs: float, sig_raw: np.ndarray, sig_pr
     ml_data = [
         [Paragraph("Classification Outcome:", cell_label_style), Paragraph(f"<b><font size='10' color='#1E3D59'>{predicted_full}</font></b>", cell_val_style)],
         [Paragraph("ML Model Used:", cell_label_style), Paragraph(model_name, cell_val_style)],
-        [Paragraph("Model Confidence Level:", cell_label_style), Paragraph(f"<b>{confidence:.1%}</b>", cell_val_style)]
+        [Paragraph("Mean model probability (uncalibrated):", cell_label_style), Paragraph(f"<b>{confidence:.1%}</b>", cell_val_style)]
     ]
 
     ml_table = Table(ml_data, colWidths=[140, 392])
@@ -143,6 +143,11 @@ def generate_pdf_report(record_name: str, fs: float, sig_raw: np.ndarray, sig_pr
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('PADDING', (0,0), (-1,-1), 5),
     ]))
     story.append(ml_table)
+    story.append(Paragraph(
+        "This average is the model's predicted-class score for beats assigned to the majority class; "
+        "it is not a calibrated clinical probability.",
+        disclaimer_style,
+    ))
     story.append(Spacer(1, 8))
 
     clean_exp_text = explanation_text.replace("**", "").replace("###", "").strip()
@@ -171,15 +176,24 @@ def generate_pdf_report(record_name: str, fs: float, sig_raw: np.ndarray, sig_pr
             [Paragraph("Total R-peaks Detected", cell_label_style), Paragraph(str(rr_metrics['num_beats']), cell_val_style),
              Paragraph("Mean Heart Rate", cell_label_style), Paragraph(f"{rr_metrics['mean_hr']:.1f} BPM", cell_val_style)],
             [Paragraph("Mean RR Interval", cell_label_style), Paragraph(f"{rr_metrics['mean_rr']:.1f} ms", cell_val_style),
-             Paragraph("SDRR (RR Variance)", cell_label_style), Paragraph(f"{rr_metrics['std_rr_sdrr']:.1f} ms", cell_val_style)],
+             Paragraph("SDRR (RR standard deviation)", cell_label_style), Paragraph(f"{rr_metrics['std_rr_sdrr']:.1f} ms", cell_val_style)],
             [Paragraph("RMSSD (HRV index)", cell_label_style), Paragraph(f"{rr_metrics['rmssd']:.1f} ms", cell_val_style),
-             Paragraph("Pacemaker Pacing", cell_label_style), Paragraph("Bradycardia (&lt;50)" if rr_metrics['mean_hr'] < 50 else ("Tachycardia (&gt;100)" if rr_metrics['mean_hr'] > 100 else "Normal Sinus Pacing"), cell_val_style)]
+             Paragraph("Mean-rate observation", cell_label_style),
+             Paragraph(
+                 "Below 60 BPM" if rr_metrics['mean_hr'] < 60
+                 else ("Above 100 BPM" if rr_metrics['mean_hr'] > 100 else "60–100 BPM"),
+                 cell_val_style,
+             )]
         ], colWidths=[130, 136, 130, 136], style=TableStyle([
             ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#BDC3C7')),
             ('BACKGROUND', (0,0), (0,-1), colors.HexColor('#F8F9F9')),
             ('BACKGROUND', (2,0), (2,-1), colors.HexColor('#F8F9F9')),
             ('PADDING', (0,0), (-1,-1), 4),
         ])),
+        Paragraph(
+            "Rate observations describe the mean detected rate only; they do not establish a rhythm diagnosis.",
+            disclaimer_style,
+        ),
         Spacer(1, 8),
         Image(peaks_fig_path, width=500, height=156),
         Spacer(1, 8),
