@@ -111,6 +111,10 @@ div[data-testid="stDataFrame"] { background: var(--surface); border-radius: 10px
 
 /* Alerts (info/warning/error/success) */
 div[data-testid="stAlert"] { border-radius: 10px; }
+
+/* Tabs (used by the Signals & Systems Lab) */
+button[data-baseweb="tab"] { color: var(--text-muted); }
+button[data-baseweb="tab"][aria-selected="true"] { color: var(--text); }
 </style>
 """,
     unsafe_allow_html=True,
@@ -125,6 +129,7 @@ from src.ui_pages import (
     render_history_page,
     render_about_page,
 )
+from src.sns_lab import render_sns_lab_page
 
 defaults = {
     "record_name": "",
@@ -168,6 +173,7 @@ with st.sidebar:
         [
             "Home",
             "DSP Analysis",
+            "Signals & Systems Lab",
             "ECG Features",
             "ML Prediction",
             "Model Performance",
@@ -200,6 +206,8 @@ if page == "Home":
     render_home_page()
 elif page == "DSP Analysis":
     render_dsp_page()
+elif page == "Signals & Systems Lab":
+    render_sns_lab_page()
 elif page == "ECG Features":
     render_features_page()
 elif page == "ML Prediction":

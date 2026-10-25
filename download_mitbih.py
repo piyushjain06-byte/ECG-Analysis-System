@@ -39,4 +39,4 @@ if __name__ == "__main__":
     if not ok:
         sys.exit(1)
 
-    print(f"\nDone. Next step:  python -m src.ml_training --source both")
+    print("\nDone. Next step:  python -m src.ml_training --source mitbih")

@@ -150,11 +150,11 @@ def main():
         perf = meta["performance"]
         models = list(perf.keys())
         acc = [perf[m]["accuracy"] for m in models]
-        f1 = [perf[m]["f1_score"] for m in models]
+        f1 = [perf[m].get("macro_f1", perf[m].get("f1_score", 0.0)) for m in models]
         x = np.arange(len(models))
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.bar(x - 0.18, acc, 0.35, label="Accuracy", color="#0369A1")
-        ax.bar(x + 0.18, f1, 0.35, label="F1", color="#0E7C7B")
+        ax.bar(x + 0.18, f1, 0.35, label="Macro F1", color="#0E7C7B")
         ax.set_xticks(x)
         ax.set_xticklabels(models, rotation=12)
         ax.set_ylim(0, 1.05)
@@ -216,6 +216,7 @@ def main():
     pred = result["dominant_class"]
     conf = result["confidence"]
     q = result["quality"]["status"]
+    conf_line = f"Mean P(class): {conf:.1%}" if conf is not None else "Mean P(class): n/a"
     text = (
         f"Record: DEMO_ARRHYTHMIA\n"
         f"Fs: {fs:.0f} Hz    Duration: {len(sig)/fs:.1f} s\n"
@@ -224,7 +225,7 @@ def main():
         f"Mean RR: {result['rr']['mean_rr']:.0f} ms\n"
         f"Beats: {result['rr']['num_beats']}\n"
         f"Prediction: {CLASS_NAMES.get(pred, pred)}\n"
-        f"Mean P(class): {conf:.1%}" if conf is not None else ""
+        f"{conf_line}"
     )
     ax2.text(0.02, 0.95, text, va="top", family="DejaVu Sans", fontsize=11, color="#0B1F3A")
     fig.suptitle("Intelligent ECG Analysis — prototype dashboard", fontweight="bold", color="#0B1F3A")

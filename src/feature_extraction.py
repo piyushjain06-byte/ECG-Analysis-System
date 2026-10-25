@@ -62,6 +62,14 @@ def extract_beat_features(signal: np.ndarray, peaks: np.ndarray, fs: float = 360
     pre_samples = int(0.09 * fs)
     post_samples = int(0.16 * fs)
 
+    # Real, per-beat QRS width (threshold-crossing based). The old fixed
+    # Q/S search window gave the same ~0.11 s for every beat, so the model
+    # had no true width information. NaN beats fall back to the median width.
+    morph = measure_qrs_morphology(signal, peaks, fs)
+    _finite = morph["qrs_duration_est"].to_numpy(dtype=float)
+    _finite = _finite[np.isfinite(_finite)]
+    dur_fallback = float(np.median(_finite)) if len(_finite) else 0.10
+
     for i in range(num_peaks):
         peak_idx = peaks[i]
 
@@ -119,8 +127,9 @@ def extract_beat_features(signal: np.ndarray, peaks: np.ndarray, fs: float = 360
         s_val = np.min(signal[peak_idx:s_end+1]) if peak_idx < s_end else r_val
 
         qrs_amplitude = r_val - min(q_val, s_val)
-        qs_width_samples = (peak_idx - q_start) + (s_end - peak_idx)
-        qrs_duration_est = qs_width_samples / fs
+
+        m_dur = morph.at[i, "qrs_duration_est"]
+        qrs_duration_est = float(m_dur) if np.isfinite(m_dur) else dur_fallback
 
         n_fft = len(segment)
         seg_fft = np.abs(fft(segment - seg_mean)) / n_fft

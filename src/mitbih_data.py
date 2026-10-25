@@ -10,6 +10,9 @@ from src.data_loader import download_mitbih_record, load_mitbih_record
 from src.preprocessing import full_dsp_pipeline
 from src.feature_extraction import extract_beat_features
 
+# MIT-BIH was recorded in the USA, so mains interference is 60 Hz (not 50 Hz).
+MITBIH_MAINS_HZ = 60.0
+
 MITBIH_DS1 = [
     "101", "106", "108", "109", "112", "114", "115", "116", "118", "119",
     "122", "124", "201", "203", "205", "207", "208", "209", "215", "220",
@@ -95,7 +98,7 @@ def generate_ml_features_dataset_from_mitbih(record_ids=None, dest_dir: str = "d
 
         sig_raw = _select_channel(signal, fields.get("sig_name"))
         fs = float(fields["fs"])
-        sig_clean = full_dsp_pipeline(sig_raw, fs=fs, normalization=None)
+        sig_clean = full_dsp_pipeline(sig_raw, fs=fs, notch_freq=MITBIH_MAINS_HZ, normalization=None)
 
         mapped_labels = [map_aami_label(s) for s in ann_symbol]
         keep = [i for i, lab in enumerate(mapped_labels) if lab is not None]
